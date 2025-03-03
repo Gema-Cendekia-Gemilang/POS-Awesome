@@ -1831,13 +1831,14 @@ export default {
       });
     },
 
-    fetch_customer_details() {
+    fetch_customer_details() { 
       const vm = this;
       if (this.customer) {
+        console.log("Data customer_info setelah fetch:", vm.customer.customer_name);
         frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_customer_info",
+          method: "reparo.api.customer.get_customer_info",
           args: {
-            customer: vm.customer,
+            customer: vm.customer.customer_name,
           },
           async: false,
           callback: (r) => {

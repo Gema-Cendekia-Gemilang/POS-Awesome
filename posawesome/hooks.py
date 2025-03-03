@@ -38,6 +38,7 @@ doctype_js = {
     "POS Profile": "posawesome/api/pos_profile.js",
     "Sales Invoice": "posawesome/api/invoice.js",
     "Company": "posawesome/api/company.js",
+    "POS Invoice": "posawesome/api/pos_invoice.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -152,6 +153,10 @@ doc_events = {
 # exempt linked doctypes from being automatically cancelled
 #
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
+whitelisted_methods = {
+    "posawesome.posawesome.api.posapp.get_customer_info",
+    "posawesome.posawesome.api.posapp.update_invoice"
+}
 
 fixtures = [
     {
