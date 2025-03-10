@@ -1,16 +1,17 @@
 <template>
   <div>
     <v-autocomplete
+      :key="autocompleteKey"
       dense
       clearable
       auto-select-first
       outlined
       color="primary"
       :label="frappe._('Customer')"
-      v-model="customer"
-      :items="customers"
-      item-text="customer_name"
-      item-value="name"
+      v-model="selectedCustomer"
+      :items="processedCustomers"
+      item-text="display_name"
+      item-value="unique_key"  
       background-color="white"
       :no-data-text="__('Customer not found')"
       hide-details
@@ -21,115 +22,137 @@
       prepend-inner-icon="mdi-account-edit"
       @click:prepend-inner="edit_customer"
     >
-      <template v-slot:item="data">
-        <template>
-          <v-list-item-content>
-            <v-list-item-title
-              class="primary--text subtitle-1"
-              v-html="data.item.customer_name"
-            ></v-list-item-title>
-            <v-list-item-subtitle
-              v-if="data.item.customer_name != data.item.name"
-              v-html="`ID: ${data.item.name}`"
-            ></v-list-item-subtitle>
-            <v-list-item-subtitle
-              v-if="data.item.tax_id"
-              v-html="`TAX ID: ${data.item.tax_id}`"
-            ></v-list-item-subtitle>
-            <v-list-item-subtitle
-              v-if="data.item.email_id"
-              v-html="`Email: ${data.item.email_id}`"
-            ></v-list-item-subtitle>
-            <v-list-item-subtitle
-              v-if="data.item.mobile_no"
-              v-html="`Mobile No: ${data.item.mobile_no}`"
-            ></v-list-item-subtitle>
-            <v-list-item-subtitle
-              v-if="data.item.primary_address"
-              v-html="`Primary Address: ${data.item.primary_address}`"
-            ></v-list-item-subtitle>
-          </v-list-item-content>
-        </template>
+      <template v-slot:item="{ item }">
+        <v-list-item-content>
+          <v-list-item-title class="primary--text subtitle-1">
+            {{ item.display_name || 'NO DISPLAY NAME' }}
+          </v-list-item-title>
+          <v-list-item-subtitle v-if="item.license_plate">
+            License Plate: {{ item.license_plate }}
+          </v-list-item-subtitle>
+          <v-list-item-subtitle v-if="item.mobile_no">
+            Mobile No: {{ item.mobile_no }}
+          </v-list-item-subtitle>
+        </v-list-item-content>
       </template>
     </v-autocomplete>
     <div class="mb-8">
-      <UpdateCustomer></UpdateCustomer>
+      <UpdateCustomer />
     </div>
   </div>
 </template>
 
 <script>
-import { evntBus } from '../../bus';
-import UpdateCustomer from './UpdateCustomer.vue';
+import { evntBus } from "../../bus";
+import UpdateCustomer from "./UpdateCustomer.vue";
+
 export default {
-  data: () => ({
-    pos_profile: '',
-    customers: [],
-    customer: '',
-    readonly: false,
-    customer_info: {},
-  }),
+  data() {
+    return {
+      pos_profile: "",
+      customers: [],
+      selectedCustomer: "", // Menyimpan customer_id saja
+      autocompleteKey: 0,
+      readonly: false,
+      customer_info: {},
+    };
+  },
 
   components: {
     UpdateCustomer,
   },
 
+  computed: {
+    processedCustomers() {
+      let processed = [];
+      console.log("Data Customers:", this.customers);
+
+      this.customers.forEach((customer) => {
+        if (customer.vehicles && customer.vehicles.length > 0) {
+          customer.vehicles.forEach((vehicle) => {
+            processed.push({
+              customer_id: customer.name, // Hanya simpan customer.name
+              customer_name: customer.customer_name,
+              display_name: `${customer.customer_name} : ${vehicle.license_plate}`,
+              license_plate: vehicle.license_plate,
+              mobile_no: customer.mobile_no || "N/A",
+              unique_key: `${customer.name}_${vehicle.license_plate}`, // Buat kombinasi unik
+            });
+          });
+        } else {
+          processed.push({
+            customer_id: customer.name, // Hanya simpan customer.name
+            customer_name: customer.customer_name,
+            display_name: customer.customer_name,
+            license_plate: null,
+            mobile_no: customer.mobile_no || "N/A",
+            unique_key: `${customer.name}_no_license`, // Unik meskipun tanpa kendaraan
+          });
+        }
+      });
+
+      console.log("Processed Customers:", processed);
+      return processed;
+    },
+  },
+
   methods: {
     get_customer_names() {
-      const vm = this;
-      if (this.customers.length > 0) {
-        return;
+      if (this.customers.length > 0) return;
+
+      if (this.pos_profile.posa_local_storage && localStorage.customer_storage) {
+        try {
+          this.customers = JSON.parse(localStorage.getItem("customer_storage"));
+        } catch (e) {
+          console.error("Error parsing customer_storage:", e);
+        }
       }
-      if (vm.pos_profile.posa_local_storage && localStorage.customer_storage) {
-        vm.customers = JSON.parse(localStorage.getItem('customer_storage'));
-      }
+
       frappe.call({
-        method: 'posawesome.posawesome.api.posapp.get_customer_names',
+        method: "reparo.api.customer.get_customer_names",
         args: {
           pos_profile: this.pos_profile.pos_profile,
         },
-        callback: function (r) {
-          if (r.message) {
-            vm.customers = r.message;
-            console.info('loadCustomers');
-            if (vm.pos_profile.posa_local_storage) {
-              localStorage.setItem('customer_storage', '');
-              localStorage.setItem(
-                'customer_storage',
-                JSON.stringify(r.message)
-              );
+        callback: (r) => {
+          console.log("API Response:", r.message);
+          if (r.message && Array.isArray(r.message)) {
+            this.$set(this, "customers", [...r.message]); // Paksa Vue mengenali perubahan
+            if (this.pos_profile.posa_local_storage) {
+              localStorage.setItem("customer_storage", JSON.stringify(r.message));
             }
+          } else {
+            console.error("Invalid response format:", r);
           }
         },
       });
     },
-    new_customer() {
-      evntBus.$emit('open_update_customer', null);
-    },
-    edit_customer() {
-      evntBus.$emit('open_update_customer', this.customer_info);
-    },
-    customFilter(item, queryText, itemText) {
-      const textOne = item.customer_name
-        ? item.customer_name.toLowerCase()
-        : '';
-      const textTwo = item.tax_id ? item.tax_id.toLowerCase() : '';
-      const textThree = item.email_id ? item.email_id.toLowerCase() : '';
-      const textFour = item.mobile_no ? item.mobile_no.toLowerCase() : '';
-      const textFifth = item.name.toLowerCase();
-      const searchText = queryText.toLowerCase();
 
+    new_customer() {
+      evntBus.$emit("open_update_customer", null);
+      this.$nextTick(() => {
+        this.$set(this, "selectedCustomer", ""); 
+        this.autocompleteKey++; 
+      });
+    },
+
+    edit_customer() {
+      evntBus.$emit("open_update_customer", this.customer_info);
+      this.$nextTick(() => {
+        this.$set(this, "selectedCustomer", ""); 
+        this.autocompleteKey++; 
+      });
+    },
+
+    customFilter(item, queryText) {
+      if (!queryText) return true;
+      const searchText = queryText.toLowerCase();
       return (
-        textOne.indexOf(searchText) > -1 ||
-        textTwo.indexOf(searchText) > -1 ||
-        textThree.indexOf(searchText) > -1 ||
-        textFour.indexOf(searchText) > -1 ||
-        textFifth.indexOf(searchText) > -1
+        item.customer_name.toLowerCase().includes(searchText) ||
+        (item.license_plate && item.license_plate.toLowerCase().includes(searchText)) ||
+        (item.mobile_no && item.mobile_no.toLowerCase().includes(searchText))
       );
     },
   },
-
-  computed: {},
 
   created: function () {
     this.$nextTick(function () {
@@ -141,27 +164,47 @@ export default {
         this.pos_profile = pos_profile;
         this.get_customer_names();
       });
-      evntBus.$on('set_customer', (customer) => {
-        this.customer = customer;
+      evntBus.$on("set_customer", (customer) => {
+        const selected = this.processedCustomers.find(c => c.customer_id === customer);
+        if (selected) {
+          this.selectedCustomer = selected.unique_key;
+        }
       });
-      evntBus.$on('add_customer_to_list', (customer) => {
+      evntBus.$on("add_customer_to_list", (customer) => {
         this.customers.push(customer);
       });
-      evntBus.$on('set_customer_readonly', (value) => {
+      evntBus.$on("set_customer_readonly", (value) => {
         this.readonly = value;
       });
-      evntBus.$on('set_customer_info_to_edit', (data) => {
+      evntBus.$on("set_customer_info_to_edit", (data) => {
         this.customer_info = data;
       });
-      evntBus.$on('fetch_customer_details', () => {
+      evntBus.$on("fetch_customer_details", () => {
         this.get_customer_names();
+      });
+      evntBus.$on("customer_updated", () => {
+        this.$nextTick(() => {
+          this.selectedCustomer = ""; // Reset setelah update data customer
+        });
       });
     });
   },
 
   watch: {
-    customer() {
-      evntBus.$emit('update_customer', this.customer);
+    selectedCustomer(newVal) {
+      if (!newVal) return;
+
+      const selectedCustomerObj = this.processedCustomers.find(
+        (c) => c.unique_key === newVal
+      );
+
+      if (selectedCustomerObj) {
+        this.customer = selectedCustomerObj.customer_name;
+        evntBus.$emit("update_customer", this.customer);
+        this.selectedCustomer = ""; // Reset otomatis setelah update event
+      } else {
+        this.selectedCustomer = ""; // Reset jika tidak ditemukan
+      }
     },
   },
 };
