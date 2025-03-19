@@ -17,9 +17,9 @@
       hide-details
       :filter="customFilter"
       :disabled="readonly"
-      append-icon="mdi-plus"
+      append-icon="mdi-account-plus"
       @click:append="new_customer"
-      prepend-inner-icon="mdi-account-edit"
+      prepend-inner-icon="mdi-car-multiple"
       @click:prepend-inner="edit_customer"
     >
       <template v-slot:item="{ item }">

@@ -8,7 +8,7 @@
       <v-card>
         <v-card-title>
           <span v-if="customer_id" class="headline primary--text">{{
-            __('Update Customer')
+            __('Add new vehicle')
           }}</span>
           <span v-else class="headline primary--text">{{
             __('Create Customer')
@@ -17,6 +17,7 @@
         <v-card-text class="pa-0">
           <v-container>
             <v-row>
+              <!-- Customer Name -->
               <v-col cols="12">
                 <v-text-field
                   dense
@@ -27,54 +28,53 @@
                   v-model="customer_name"
                 ></v-text-field>
               </v-col>
+              <!-- Email ID and Mobile No -->
               <v-col cols="6">
                 <v-text-field
                   dense
                   color="primary"
-                  :label="frappe._('Tax ID')"
-                  background-color="white"
-                  hide-details
-                  v-model="tax_id"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="6">
-                <v-text-field
-                  dense
-                  color="primary"
-                  :label="frappe._('Mobile No')"
-                  background-color="white"
-                  hide-details
-                  v-model="mobile_no"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="6">
-                <v-text-field
-                  dense
-                  color="primary"
-                  :label="frappe._('Email Id')"
+                  :label="frappe._('Email Id') + ' *'"
                   background-color="white"
                   hide-details
                   v-model="email_id"
                 ></v-text-field>
               </v-col>
               <v-col cols="6">
-                <v-select
-                  dense
-                  label="Gender"
-                  :items="genders"
-                  v-model="gender"
-                ></v-select>
-              </v-col>
-              <v-col cols="6">
                 <v-text-field
                   dense
                   color="primary"
-                  :label="frappe._('Referral Code')"
+                  :label="frappe._('Mobile No') + ' *'"
                   background-color="white"
                   hide-details
-                  v-model="referral_code"
+                  v-model="mobile_no"
                 ></v-text-field>
               </v-col>
+              <!-- Vehicles -->
+              <v-col cols="12" v-for="(vehicle, index) in vehicles" :key="vehicle.id || index">
+                <v-row>
+                  <v-col cols="6">
+                    <v-text-field
+                      dense
+                      color="primary"
+                      :label="`License Plate *`"
+                      background-color="white"
+                      hide-details
+                      v-model="vehicle.license_plate"
+                    ></v-text-field>
+                  </v-col>
+                  <v-col cols="6">
+                    <v-text-field
+                      dense
+                      color="primary"
+                      :label="`Vehicle Brand *`"
+                      background-color="white"
+                      hide-details
+                      v-model="vehicle.brand"
+                    ></v-text-field>
+                  </v-col>
+                </v-row>
+              </v-col>
+              <!-- Referral Code and Birthday -->
               <v-col cols="6">
                 <v-menu
                   ref="birthday_menu"
@@ -107,6 +107,7 @@
                   </v-date-picker>
                 </v-menu>
               </v-col>
+              <!-- Customer Group and Territory -->
               <v-col cols="6">
                 <v-autocomplete
                   clearable
@@ -129,7 +130,7 @@
                   dense
                   auto-select-first
                   color="primary"
-                  :label="frappe._('Territory') + ' *'"
+                  :label="frappe._('Country') + ' *'"
                   v-model="territory"
                   :items="territorys"
                   background-color="white"
@@ -139,6 +140,7 @@
                 >
                 </v-autocomplete>
               </v-col>
+              <!-- Loyalty Program and Points -->
               <v-col cols="6" v-if="loyalty_program">
                 <v-text-field
                   v-model="loyalty_program"
@@ -176,6 +178,7 @@
 
 <script>
 import { evntBus } from '../../bus';
+
 export default {
   data: () => ({
     customerDialog: false,
@@ -188,18 +191,24 @@ export default {
     referral_code: '',
     birthday: null,
     birthday_menu: false,
-    group: '',
+    group: 'Individual', // Default value
     groups: [],
-    territory: '',
+    territory: 'Indonesia', // Default value
     territorys: [],
     genders: [],
     customer_type: 'Individual',
     gender: '',
+    vehicles: [{ license_plate: '', brand: '' }],
     loyalty_points: null,
     loyalty_program: null,
   }),
-  watch: {},
   methods: {
+    addVehicle() {
+      this.$set(this.vehicles, this.vehicles.length, { license_plate: '', brand: '' });
+    },
+    removeVehicle(index) {
+      this.vehicles.splice(index, 1);
+    },
     close_dialog() {
       this.customerDialog = false;
       this.clear_customer();
@@ -208,11 +217,12 @@ export default {
       this.customer_name = '';
       this.tax_id = '';
       this.mobile_no = '';
+      this.vehicles = [{ license_plate: '', brand: '' }];
       this.email_id = '';
       this.referral_code = '';
       this.birthday = '';
-      this.group = frappe.defaults.get_user_default('Customer Group');
-      this.territory = frappe.defaults.get_user_default('Territory');
+      this.group = 'Individual'; // Default value
+      this.territory = 'Indonesia'; // Default value
       this.customer_id = '';
       this.customer_type = 'Individual';
       this.gender = '';
@@ -271,10 +281,24 @@ export default {
         });
     },
     submit_dialog() {
-      // validate if all required fields are filled
+      // Validasi input
       if (!this.customer_name) {
         evntBus.$emit('show_mesage', {
           text: __('Customer name is required.'),
+          color: 'error',
+        });
+        return;
+      }
+      if (!this.email_id) {
+        evntBus.$emit('show_mesage', {
+          text: __('Email ID is required.'),
+          color: 'error',
+        });
+        return;
+      }
+      if (!this.mobile_no) {
+        evntBus.$emit('show_mesage', {
+          text: __('Mobile number is required.'),
           color: 'error',
         });
         return;
@@ -288,59 +312,63 @@ export default {
       }
       if (!this.territory) {
         evntBus.$emit('show_mesage', {
-          text: __('Customer territory is required.'),
+          text: __('Territory is required.'),
           color: 'error',
         });
         return;
       }
-      if (this.customer_name) {
-        const vm = this;
-        const args = {
-          customer_id: this.customer_id,
-          customer_name: this.customer_name,
-          company: this.pos_profile.company,
-          tax_id: this.tax_id,
-          mobile_no: this.mobile_no,
-          email_id: this.email_id,
-          referral_code: this.referral_code,
-          birthday: this.birthday,
-          customer_group: this.group,
-          territory: this.territory,
-          customer_type: this.customer_type,
-          gender: this.gender,
-          method: this.customer_id ? 'update' : 'create',
-          pos_profile_doc: this.pos_profile,
-        };
-        frappe.call({
-          method: 'posawesome.posawesome.api.posapp.create_customer',
-          args: args,
-          callback: (r) => {
-            if (!r.exc && r.message.name) {
-              let text = __('Customer created successfully.');
-              if (vm.customer_id) {
-                text = __('Customer updated successfully.');
-              }
-              evntBus.$emit('show_mesage', {
-                text: text,
-                color: 'success',
-              });
-              args.name = r.message.name;
-              frappe.utils.play_sound('submit');
-              evntBus.$emit('add_customer_to_list', args);
-              evntBus.$emit('set_customer', r.message.name);
-              evntBus.$emit('fetch_customer_details');
-              this.close_dialog();
-            } else {
-              frappe.utils.play_sound('error');
-              evntBus.$emit('show_mesage', {
-                text: __('Customer creation failed.'),
-                color: 'error',
-              });
-            }
-          },
+      // Validate vehicles
+      const invalidVehicles = this.vehicles.some(
+        (vehicle) => !vehicle.license_plate || !vehicle.brand
+      );
+      if (invalidVehicles) {
+        evntBus.$emit('show_mesage', {
+          text: __('Please fill all vehicle details.'),
+          color: 'error',
         });
-        this.customerDialog = false;
+        return;
       }
+      // Submit customer data
+      const vm = this;
+      const args = {
+        customer_id: this.customer_id,
+        customer_name: this.customer_name,
+        company: this.pos_profile.company,
+        tax_id: this.tax_id,
+        vehicles: this.vehicles,
+        email_id: this.email_id,
+        referral_code: this.referral_code,
+        birthday: this.birthday,
+        customer_group: this.group,
+        territory: this.territory,
+        customer_type: this.customer_type,
+        gender: this.gender,
+        method: this.customer_id ? 'update' : 'create',
+        pos_profile_doc: this.pos_profile,
+      };
+      frappe.call({
+        method: 'reparo.api.customer.create_customer',
+        args: args,
+        callback: (r) => {
+          if (!r.exc && r.message.name) {
+            let text = __('Customer created successfully.');
+            if (this.customer_id) {
+              text = __('Customer updated successfully.');
+            }
+            evntBus.$emit('show_mesage', {
+              text: text,
+              color: 'success',
+            });
+            this.close_dialog();
+          } else {
+            evntBus.$emit('show_mesage', {
+              text: __('Customer creation failed.'),
+              color: 'error',
+            });
+          }
+        },
+      });
+      this.customerDialog = false;
     },
   },
   created: function () {
@@ -351,28 +379,40 @@ export default {
         this.customer_id = data.name;
         this.tax_id = data.tax_id;
         this.mobile_no = data.mobile_no;
+        if (data.vehicles && Array.isArray(data.vehicles) && data.vehicles.length > 0) {
+          this.vehicles = data.vehicles.map(vehicle => ({
+            license_plate: vehicle.license_plate || '',
+            brand: vehicle.brand || ''
+          }));
+        } else {
+          this.vehicles = [{ license_plate: '', brand: '' }];
+        }
         this.email_id = data.email_id;
         this.referral_code = data.referral_code;
         this.birthday = data.birthday;
-        this.group = data.customer_group;
-        this.territory = data.territory;
+        this.group = data.customer_group || 'Individual'; // Default to 'Individual'
+        this.territory = data.territory || 'Indonesia'; // Default to 'Indonesia'
         this.loyalty_points = data.loyalty_points;
         this.loyalty_program = data.loyalty_program;
         this.gender = data.gender;
       }
     });
+
     evntBus.$on('register_pos_profile', (data) => {
       this.pos_profile = data.pos_profile;
     });
+
     evntBus.$on('payments_register_pos_profile', (data) => {
       this.pos_profile = data.pos_profile;
     });
+
     this.getCustomerGroups();
     this.getCustomerTerritorys();
     this.getGenders();
-    // set default values for customer group and territory from user defaults
-    this.group = frappe.defaults.get_user_default('Customer Group');
-    this.territory = frappe.defaults.get_user_default('Territory');
+
+    // Set default values for new customers
+    this.group = 'Individual';
+    this.territory = 'Indonesia';
   },
 };
 </script>
