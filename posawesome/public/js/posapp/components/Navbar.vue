@@ -157,7 +157,7 @@ export default {
       snack: false,
       snackColor: '',
       snackText: '',
-      company: 'POS Awesome',
+      company: 'GCG Reparo',
       company_img: '/assets/erpnext/images/erpnext-logo.svg',
       pos_profile: '',
       freeze: false,
@@ -192,15 +192,18 @@ export default {
     logOut() {
       var me = this;
       me.logged_out = true;
+      // Panggil metode logout dari server
       return frappe.call({
-        method: 'logout',
-        callback: function (r) {
-          if (r.exc) {
-            return;
-          }
-          frappe.set_route('/login');
-          location.reload();
-        },
+          method: 'logout',
+          callback: function (r) {
+              if (r.exc) {
+                  console.error('Logout error:', r.exc);
+                  return;
+              }
+
+              // Redirect manual ke halaman /reparo-front
+              window.location.href = '/reparo-front';
+          },
       });
     },
     print_last_invoice() {
