@@ -7,7 +7,7 @@
       ></v-app-bar-nav-icon>
       <v-img
         src="/assets/posawesome/js/posapp/components/pos/pos.png"
-        alt="POS Awesome"
+        alt="GCG Reparo"
         max-width="32"
         class="mr-2"
         color="primary"
@@ -17,8 +17,8 @@
         style="cursor: pointer"
         class="text-uppercase primary--text"
       >
-        <span class="font-weight-light">pos</span>
-        <span>awesome</span>
+        <span class="font-weight-light">gcg</span>
+        <span>Reparo</span>
       </v-toolbar-title>
 
       <v-spacer></v-spacer>
