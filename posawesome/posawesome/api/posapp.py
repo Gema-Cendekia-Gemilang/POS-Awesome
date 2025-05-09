@@ -491,7 +491,7 @@ def update_invoice_from_order(data):
     invoice_doc.save()
     return invoice_doc
 
-#update def 
+
 @frappe.whitelist()
 def update_invoice(data):
     data = json.loads(data)
@@ -500,12 +500,6 @@ def update_invoice(data):
         invoice_doc.update(data)
     else:
         invoice_doc = frappe.get_doc(data)
-
-    # FIX: Bersihkan nilai 'Nothing' yang salah dari give_item di POS Offer
-    if hasattr(invoice_doc, "posa_offers"):
-        for offer in invoice_doc.posa_offers:
-            if offer.get("give_item") == "Nothing":
-                offer.give_item = None
 
     invoice_doc.set_missing_values()
     invoice_doc.flags.ignore_permissions = True
@@ -523,7 +517,6 @@ def update_invoice(data):
         for payment in invoice_doc.payments:
             if payment.default:
                 payment.amount = invoice_doc.paid_amount
-
     allow_zero_rated_items = frappe.get_cached_value(
         "POS Profile", invoice_doc.pos_profile, "posa_allow_zero_rated_items"
     )
@@ -556,6 +549,7 @@ def update_invoice(data):
 
     invoice_doc.save()
     return invoice_doc
+
 
 @frappe.whitelist()
 def submit_invoice(invoice, data):
