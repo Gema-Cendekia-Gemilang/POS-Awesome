@@ -15,21 +15,39 @@
       <v-toolbar-title
         @click="go_desk"
         style="cursor: pointer"
-        class="text-uppercase primary--text"
+        class="primary--text"
       >
-        <span class="font-weight-light">pos</span>
-        <span>awesome</span>
+        <span class="font-weight-light">GCG</span>
+        <span> Mart</span>
       </v-toolbar-title>
 
       <v-spacer></v-spacer>
       <v-btn style="cursor: unset" text color="primary">
         <span right>{{ pos_profile.name }}</span>
       </v-btn>
+      <div class="text-center mr-2">
+        <v-menu offset-y>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn color="primary" dark text v-bind="attrs" v-on="on">
+              <v-icon left>mdi-translate</v-icon>
+              {{ currentLanguage }}
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item @click="changeLanguage('en')">
+              <v-list-item-title>English</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="changeLanguage('id')">
+              <v-list-item-title>Bahasa Indonesia</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </div>
       <div class="text-center">
         <v-menu offset-y>
           <template v-slot:activator="{ on, attrs }">
             <v-btn color="primary" dark text v-bind="attrs" v-on="on"
-              >Menu</v-btn
+              >{{ __('Menu') }}</v-btn
             >
           </template>
           <v-card class="mx-auto" max-width="300" tile>
@@ -157,13 +175,14 @@ export default {
       snack: false,
       snackColor: '',
       snackText: '',
-      company: 'POS Awesome',
+      company: 'GCG Mart',
       company_img: '/assets/erpnext/images/erpnext-logo.svg',
       pos_profile: '',
       freeze: false,
       freezeTitle: '',
       freezeMsg: '',
       last_invoice: '',
+      currentLanguage: this.getLanguageLabel(),
     };
   },
   methods: {
@@ -227,6 +246,29 @@ export default {
         true
       );
     },
+    changeLanguage(lang) {
+      // Save language preference to localStorage
+      localStorage.setItem('posawesome_language', lang);
+      
+      // Change Frappe language
+      frappe.call({
+        method: 'frappe.client.set_value',
+        args: {
+          doctype: 'User',
+          name: frappe.session.user,
+          fieldname: 'language',
+          value: lang
+        },
+        callback: (r) => {
+          // Reload page to apply language change
+          location.reload();
+        }
+      });
+    },
+    getLanguageLabel() {
+      const lang = localStorage.getItem('posawesome_language') || frappe.boot.lang || 'en';
+      return lang === 'id' ? 'ID' : 'EN';
+    },
   },
   created: function () {
     this.$nextTick(function () {
@@ -241,7 +283,7 @@ export default {
       });
       evntBus.$on('register_pos_profile', (data) => {
         this.pos_profile = data.pos_profile;
-        const payments = { text: 'Payments', icon: 'mdi-cash-register' };
+        const payments = { text: __('Payments'), icon: 'mdi-cash-register' };
         if (
           this.pos_profile.posa_use_pos_awesome_payments &&
           this.items.length !== 2

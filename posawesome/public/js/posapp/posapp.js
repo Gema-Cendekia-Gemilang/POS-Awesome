@@ -1,6 +1,10 @@
 import Home from './Home.vue';
+import { initLanguage } from './i18n.js';
 
 frappe.provide('frappe.PosApp');
+
+// Initialize language preference
+initLanguage();
 
 
 frappe.PosApp.posapp = class {
