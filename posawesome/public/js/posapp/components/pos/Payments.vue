@@ -967,6 +967,14 @@ export default {
         e.preventDefault();
         this.submit();
       }
+      if (e.key === "p" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        this.submit(undefined, false, true);
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        this.back_to_invoice();
+      }
     },
     set_paid_change() {
       if (!this.paid_change) this.paid_change = 0;
