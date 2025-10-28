@@ -130,9 +130,24 @@
     
     .barcode {
         text-align: center;
-        margin: 3mm 0;
+        margin: 5mm auto;
         font-size: 10pt;
         font-family: 'Courier New', monospace;
+    }
+    
+    .barcode #invoice-barcode {
+        display: inline-block;
+    }
+    
+    .barcode canvas {
+        display: block;
+        margin: 0 auto;
+    }
+    
+    .barcode-text {
+        font-size: 9pt;
+        margin-top: 1mm;
+        font-weight: bold;
     }
 </style>
 
@@ -163,12 +178,12 @@
         <span>{{ doc.owner.split("@")[0] }}</span>
     </div>
     {% endif %}
-    {% if doc.customer and doc.customer != "Guest" %}
+    <!-- {% if doc.customer and doc.customer != "Guest" %}
     <div class="info-row">
         <span>Customer:</span>
         <span>{{ doc.customer_name or doc.customer }}</span>
     </div>
-    {% endif %}
+    {% endif %} -->
     
     <div class="separator"></div>
     
@@ -246,9 +261,10 @@
     </div>
     {% endif %}
     
-    <!-- Barcode / Invoice Number -->
+    <!-- QR Code / Invoice Number -->
     <div class="barcode">
-        {{ doc.name }}
+        <div id="invoice-barcode"></div>
+        <div class="barcode-text">{{ doc.name }}</div>
     </div>
     
     <!-- Footer -->
@@ -261,9 +277,35 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js"></script>
 <script>
+    // Generate QR Code
+    function generateQRCode() {
+        const invoiceNumber = "{{ doc.name }}";
+        const qrcodeElement = document.getElementById("invoice-barcode");
+        
+        if (qrcodeElement && invoiceNumber && typeof QRCode !== 'undefined') {
+            try {
+                qrcodeElement.innerHTML = "";
+                new QRCode(qrcodeElement, {
+                    text: invoiceNumber,
+                    width: 80,
+                    height: 80,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } catch (e) {
+                console.error("QR Code generation failed:", e);
+            }
+        }
+    }
+    
     // Auto print when loaded
     window.onload = function() {
-        window.print();
+        generateQRCode();
+        setTimeout(function() {
+            window.print();
+        }, 500);
     }
 </script>
