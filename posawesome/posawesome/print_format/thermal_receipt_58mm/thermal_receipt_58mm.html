@@ -1,0 +1,269 @@
+<style>
+    @media print {
+        @page {
+            size: 58mm auto;
+            margin: 2mm;
+        }
+    }
+    
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body {
+        font-family: 'Courier New', monospace;
+        font-size: 9pt;
+        width: 58mm;
+        margin: 0 auto;
+        padding: 2mm 4mm;
+        color: #000;
+    }
+    
+    .receipt {
+        width: 100%;
+        padding: 0 4mm 0 0;
+    }
+    
+    .text-center {
+        text-align: center;
+    }
+    
+    .text-right {
+        text-align: right;
+    }
+    
+    .bold {
+        font-weight: bold;
+    }
+    
+    .header {
+        text-align: center;
+        margin-bottom: 3mm;
+        padding-bottom: 2mm;
+        border-bottom: 1px dashed #000;
+    }
+    
+    .company-name {
+        font-size: 12pt;
+        font-weight: bold;
+        margin-bottom: 1mm;
+    }
+    
+    .company-info {
+        font-size: 8pt;
+        line-height: 1.3;
+    }
+    
+    .separator {
+        border-top: 1px dashed #000;
+        margin: 2mm 0;
+    }
+    
+    .separator-double {
+        border-top: 1px solid #000;
+        margin: 2mm 0;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 8pt;
+        margin: 1mm 0;
+    }
+    
+    .items-table {
+        width: 100%;
+        margin: 2mm 0;
+        font-size: 8pt;
+    }
+    
+    .item-row {
+        margin: 1.5mm 0;
+    }
+    
+    .item-name {
+        font-weight: bold;
+        margin-bottom: 0.5mm;
+    }
+    
+    .item-details {
+        display: flex;
+        justify-content: space-between;
+        font-size: 8pt;
+    }
+    
+    .totals {
+        margin-top: 2mm;
+        padding-top: 2mm;
+        border-top: 1px solid #000;
+    }
+    
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 1mm 0;
+    }
+    
+    .grand-total {
+        font-size: 11pt;
+        font-weight: bold;
+        padding: 2mm 0;
+        border-top: 1px solid #000;
+        border-bottom: 1px solid #000;
+        margin: 2mm 0;
+    }
+    
+    .payment-info {
+        margin: 2mm 0;
+        font-size: 8pt;
+    }
+    
+    .footer {
+        text-align: center;
+        margin-top: 3mm;
+        padding-top: 2mm;
+        border-top: 1px dashed #000;
+        font-size: 8pt;
+    }
+    
+    .barcode {
+        text-align: center;
+        margin: 3mm 0;
+        font-size: 10pt;
+        font-family: 'Courier New', monospace;
+    }
+</style>
+
+<div class="receipt">
+    <!-- Header -->
+    <div class="header">
+        <div class="company-name">{{ doc.company }}</div>
+        {% if doc.company_address_display %}
+        <div class="company-info">{{ doc.company_address_display|replace("\n", "<br>")|safe }}</div>
+        {% endif %}
+        {% if frappe.db.get_value("Company", doc.company, "phone_no") %}
+        <div class="company-info">Tel: {{ frappe.db.get_value("Company", doc.company, "phone_no") }}</div>
+        {% endif %}
+    </div>
+    
+    <!-- Invoice Info -->
+    <!-- <div class="info-row">
+        <span>No Invoice:</span>
+        <span class="bold">{{ doc.name }}</span>
+    </div> -->
+    <div class="info-row">
+        <span>Tanggal:</span>
+        <span>{{ frappe.format_date(doc.posting_date, "dd/MM/yyyy") }} {{ doc.posting_time }}</span>
+    </div>
+    {% if doc.pos_profile %}
+    <div class="info-row">
+        <span>Kasir:</span>
+        <span>{{ doc.owner.split("@")[0] }}</span>
+    </div>
+    {% endif %}
+    {% if doc.customer and doc.customer != "Guest" %}
+    <div class="info-row">
+        <span>Customer:</span>
+        <span>{{ doc.customer_name or doc.customer }}</span>
+    </div>
+    {% endif %}
+    
+    <div class="separator"></div>
+    
+    <!-- Items -->
+    <div class="items-table">
+        {% for item in doc.items %}
+        <div class="item-row">
+            <div class="item-name">{{ item.item_name or item.item_code }}</div>
+            <div class="item-details">
+                <span>{{ "%.0f"|format(item.qty) }} x {{ frappe.format_value(item.rate, {"fieldtype": "Currency"}) }}</span>
+                <span class="bold">{{ frappe.format_value(item.amount, {"fieldtype": "Currency"}) }}</span>
+            </div>
+            {% if item.discount_percentage and item.discount_percentage > 0 %}
+            <div class="item-details" style="font-size: 7pt; color: #666;">
+                <span>Diskon {{ "%.0f"|format(item.discount_percentage) }}%</span>
+                <span>-{{ frappe.format_value(item.discount_amount, {"fieldtype": "Currency"}) }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="separator"></div>
+    
+    <!-- Totals -->
+    <div class="totals">
+        {% if doc.discount_amount and doc.discount_amount > 0 %}
+        <div class="total-row">
+            <span>Diskon:</span>
+            <span>-{{ frappe.format_value(doc.discount_amount, {"fieldtype": "Currency"}) }}</span>
+        </div>
+        {% endif %}
+        
+        {% if doc.total_taxes_and_charges and doc.total_taxes_and_charges > 0 %}
+        <div class="total-row">
+            <span>Pajak:</span>
+            <span>{{ frappe.format_value(doc.total_taxes_and_charges, {"fieldtype": "Currency"}) }}</span>
+        </div>
+        {% endif %}
+        
+        <div class="separator-double"></div>
+        
+        <div class="total-row grand-total">
+            <span>TOTAL:</span>
+            <span>{{ frappe.format_value(doc.rounded_total or doc.grand_total, {"fieldtype": "Currency"}) }}</span>
+        </div>
+    </div>
+    
+    <!-- Payment Method -->
+    {% if doc.payments %}
+    <div class="payment-info">
+        {% for payment in doc.payments %}
+        {% if payment.amount > 0 %}
+        <div class="total-row">
+            <span>{{ payment.mode_of_payment }}:</span>
+            <span>{{ frappe.format_value(payment.amount, {"fieldtype": "Currency"}) }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+        
+        {% set total_paid = doc.payments|sum(attribute='amount') %}
+        {% set change = total_paid - (doc.rounded_total or doc.grand_total) %}
+        
+        {% if change > 0 %}
+        <div class="separator"></div>
+        <div class="total-row">
+            <span>Bayar:</span>
+            <span>{{ frappe.format_value(total_paid, {"fieldtype": "Currency"}) }}</span>
+        </div>
+        <div class="total-row bold">
+            <span>Kembali:</span>
+            <span>{{ frappe.format_value(change, {"fieldtype": "Currency"}) }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Barcode / Invoice Number -->
+    <div class="barcode">
+        {{ doc.name }}
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+        <div>*** TERIMA KASIH ***</div>
+        <div>SELAMAT BERBELANJA KEMBALI</div>
+        {% if doc.posa_notes %}
+        <div style="margin-top: 2mm;">{{ doc.posa_notes }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Auto print when loaded
+    window.onload = function() {
+        window.print();
+    }
+</script>

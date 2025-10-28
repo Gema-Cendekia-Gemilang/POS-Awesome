@@ -155,6 +155,10 @@ doc_events = {
 
 fixtures = [
     {
+        "doctype": "Print Format",
+        "filters": [["name", "in", ["Thermal Receipt 58mm"]]],
+    },
+    {
         "doctype": "Custom Field",
         "filters": [
             [
