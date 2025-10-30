@@ -217,8 +217,7 @@ export default {
           if (r.exc) {
             return;
           }
-          frappe.set_route('/login');
-          location.reload();
+          window.location.href = '/';
         },
       });
     },
