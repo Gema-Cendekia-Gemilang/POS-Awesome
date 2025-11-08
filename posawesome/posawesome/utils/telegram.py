@@ -1,4 +1,5 @@
 import frappe
+from frappe.integrations.utils import make_post_request
 from frappe.utils import cstr
 
 
@@ -34,6 +35,6 @@ def send_telegram_message(message: str) -> None:
     }
 
     try:
-        frappe.make_post_request(url, data=payload)
+        make_post_request(url, data=payload)
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"{ERROR_TITLE} sendMessage failed")
