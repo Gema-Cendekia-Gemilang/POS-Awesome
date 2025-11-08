@@ -7,12 +7,13 @@ from __future__ import unicode_literals
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import flt, add_days
+from frappe.utils import flt, add_days, format_value
 from posawesome.posawesome.doctype.pos_coupon.pos_coupon import update_coupon_code_count
 from posawesome.posawesome.api.posapp import get_company_domain
 from posawesome.posawesome.doctype.delivery_charges.delivery_charges import (
     get_applicable_delivery_charges,
 )
+from posawesome.posawesome.utils.telegram import send_telegram_message
 
 
 def validate(doc, method):
@@ -141,6 +142,48 @@ def update_coupon(doc, transaction_type):
         if not coupon.applied:
             continue
         update_coupon_code_count(coupon.coupon, transaction_type)
+
+
+def notify_telegram_on_submit(doc, method):
+    """Send Telegram notification after POS Sales Invoice is submitted."""
+    if not getattr(doc, "is_pos", False):
+        return
+
+    outstanding = flt(doc.outstanding_amount or 0)
+    if doc.status != "Paid" and outstanding != 0:
+        return
+
+    if doc.get("posa_telegram_notified"):
+        return
+
+    total_fmt = format_value(
+        doc.grand_total,
+        {"fieldtype": "Currency", "options": doc.currency},
+    )
+    posting_time = getattr(doc, "posting_time", "")
+    when = f"{doc.posting_date} {str(posting_time)[:5] if posting_time else ''}".strip()
+    status_label = doc.status or "Submitted"
+
+    message = (
+        f"\U0001F9FE <b>TRANSAKSI{' RETUR' if doc.is_return else ''}</b>\n"
+        f"Invoice: <b>{doc.name}</b>\n"
+        f"Waktu: {when}\n"
+        f"Kasir: {doc.owner}\n"
+        f"Pelanggan: {doc.customer or 'Umum'}\n"
+        f"Total: <b>{total_fmt}</b>\n"
+        f"Status: {status_label}"
+    )
+
+    send_telegram_message(message)
+
+    if doc.meta.get_field("posa_telegram_notified"):
+        frappe.db.set_value(
+            doc.doctype,
+            doc.name,
+            "posa_telegram_notified",
+            1,
+            update_modified=False,
+        )
 
 
 def set_patient(doc):

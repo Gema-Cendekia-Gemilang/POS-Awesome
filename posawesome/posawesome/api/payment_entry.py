@@ -3,7 +3,7 @@
 
 import frappe, erpnext, json
 from frappe import _
-from frappe.utils import nowdate, getdate, flt
+from frappe.utils import nowdate, getdate, flt, format_value
 from erpnext.accounts.party import get_party_account
 from erpnext.accounts.utils import get_account_currency
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
@@ -13,6 +13,29 @@ from erpnext.setup.utils import get_exchange_rate
 from erpnext.accounts.doctype.bank_account.bank_account import get_party_bank_account
 from posawesome.posawesome.api.m_pesa import submit_mpesa_payment
 from erpnext.accounts.utils import QueryPaymentLedger, get_outstanding_invoices as _get_outstanding_invoices
+from posawesome.posawesome.utils.telegram import send_telegram_message
+
+
+def notify_telegram_on_submit(doc, method):
+    """Send Telegram notification when a Payment Entry settles Sales Invoices."""
+    references = [d for d in (doc.references or []) if d.reference_doctype == "Sales Invoice"]
+    if not references:
+        return
+
+    invoices = ", ".join(sorted({d.reference_name for d in references}))
+    amount_fmt = format_value(
+        doc.paid_amount,
+        {"fieldtype": "Currency", "options": doc.paid_from_account_currency},
+    )
+
+    message = (
+        "\U0001F4B0 <b>PAYMENT masuk</b>\n"
+        f"Ref Invoice: {invoices}\n"
+        f"Jumlah: <b>{amount_fmt}</b>\n"
+        f"Metode: {doc.mode_of_payment or '-'}"
+    )
+
+    send_telegram_message(message)
 
 
 def create_payment_entry(
