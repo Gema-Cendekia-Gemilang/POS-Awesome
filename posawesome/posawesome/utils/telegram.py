@@ -51,6 +51,9 @@ def _dispatch_telegram_message(token: str, chat_id: str, message: str) -> None:
     }
 
     try:
-        make_post_request(url, data=payload, timeout=30)
+        try:
+            make_post_request(url, data=payload, timeout=30)
+        except TypeError:
+            make_post_request(url, data=payload)
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"{ERROR_TITLE} sendMessage failed")
