@@ -1,4 +1,5 @@
 import frappe
+import requests
 from frappe.integrations.utils import make_post_request
 from frappe.utils import cstr
 
@@ -54,6 +55,11 @@ def _dispatch_telegram_message(token: str, chat_id: str, message: str) -> None:
         try:
             make_post_request(url, data=payload, timeout=30)
         except TypeError:
-            make_post_request(url, data=payload)
+            _post_via_requests(url, payload)
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"{ERROR_TITLE} sendMessage failed")
+
+
+def _post_via_requests(url: str, payload: dict) -> None:
+    response = requests.post(url, data=payload, timeout=30)
+    response.raise_for_status()
