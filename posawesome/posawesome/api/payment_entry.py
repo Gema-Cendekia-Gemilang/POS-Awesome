@@ -3,7 +3,8 @@
 
 import frappe, erpnext, json
 from frappe import _
-from frappe.utils import nowdate, getdate, flt, format_value
+from frappe.utils import nowdate, getdate, flt
+from frappe.utils.data import format_value
 from erpnext.accounts.party import get_party_account
 from erpnext.accounts.utils import get_account_currency
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
