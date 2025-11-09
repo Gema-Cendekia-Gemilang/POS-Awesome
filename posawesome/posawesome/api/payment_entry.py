@@ -3,8 +3,7 @@
 
 import frappe, erpnext, json
 from frappe import _
-from frappe.utils import nowdate, getdate, flt
-from frappe.utils.data import format_value
+from frappe.utils import nowdate, getdate, flt, fmt_money
 from erpnext.accounts.party import get_party_account
 from erpnext.accounts.utils import get_account_currency
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
@@ -24,10 +23,7 @@ def notify_telegram_on_submit(doc, method):
         return
 
     invoices = ", ".join(sorted({d.reference_name for d in references}))
-    amount_fmt = format_value(
-        doc.paid_amount,
-        {"fieldtype": "Currency", "options": doc.paid_from_account_currency},
-    )
+    amount_fmt = fmt_money(doc.paid_amount, currency=doc.paid_from_account_currency)
 
     message = (
         "\U0001F4B0 <b>PAYMENT masuk</b>\n"

@@ -7,8 +7,7 @@ from __future__ import unicode_literals
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import flt, add_days
-from frappe.utils.data import format_value
+from frappe.utils import flt, add_days, fmt_money
 from posawesome.posawesome.doctype.pos_coupon.pos_coupon import update_coupon_code_count
 from posawesome.posawesome.api.posapp import get_company_domain
 from posawesome.posawesome.doctype.delivery_charges.delivery_charges import (
@@ -157,10 +156,7 @@ def notify_telegram_on_submit(doc, method):
     if doc.get("posa_telegram_notified"):
         return
 
-    total_fmt = format_value(
-        doc.grand_total,
-        {"fieldtype": "Currency", "options": doc.currency},
-    )
+    total_fmt = fmt_money(doc.grand_total, currency=doc.currency)
     posting_time = getattr(doc, "posting_time", "")
     when = f"{doc.posting_date} {str(posting_time)[:5] if posting_time else ''}".strip()
     status_label = doc.status or "Submitted"
