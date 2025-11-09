@@ -20,12 +20,28 @@ def _get_telegram_credentials():
     return cstr(token).strip(), cstr(chat_id).strip()
 
 
-def send_telegram_message(message: str) -> None:
+def send_telegram_message(message: str, run_async: bool = True) -> None:
     """Send `message` to Telegram using the configured bot credentials."""
     token, chat_id = _get_telegram_credentials()
     if not token or not chat_id:
         return
 
+    if run_async:
+        frappe.enqueue(
+            "posawesome.posawesome.utils.telegram._dispatch_telegram_message",
+            queue="short",
+            timeout=60,
+            job_name=f"telegram-{frappe.generate_hash(length=8)}",
+            token=token,
+            chat_id=chat_id,
+            message=message,
+        )
+        return
+
+    _dispatch_telegram_message(token=token, chat_id=chat_id, message=message)
+
+
+def _dispatch_telegram_message(token: str, chat_id: str, message: str) -> None:
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
         "chat_id": chat_id,
@@ -35,6 +51,6 @@ def send_telegram_message(message: str) -> None:
     }
 
     try:
-        make_post_request(url, data=payload)
+        make_post_request(url, data=payload, timeout=30)
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"{ERROR_TITLE} sendMessage failed")
